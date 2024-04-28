@@ -1,40 +1,71 @@
+// const express = require("express");
+// const ytdt = require("ytdl-core");
+// var cors = require("cors");
+// const portNumber = 5000;
+// // require("dotenv").config();
+
+// const app = express();
+// app.use(cors());
+// app.get("/download", async (req, res) => {
+//   try {
+//     const {  url } = req.query;
+//     const videoId = await ytdt.getURLVideoID(url);
+//       const metaInfo = await ytdt.getInfo(url);
+//       let data = {
+//         url: "https://www.youtube.com/embed/" + videoId,
+//         info: metaInfo.formats,
+//       };
+//       return res.status(200).send(data);
+//   } catch (error) {
+//     return console.log(error);
+//   }
+// });
+// app.listen(portNumber, () =>
+//   console.log(`Example app is listening on port ${portNumber}.`)
+// );
+
 const express = require("express");
 const ytdt = require("ytdl-core");
-var cors = require("cors");
+const cors = require("cors");
+require('dotenv').config();
+
 const portNumber = 5000;
-// require("dotenv").config();
+const apiKey = process.env.APIKEY; 
 
 const app = express();
 app.use(cors());
-app.get("/download", async (req, res) => {
+
+// Middleware to verify API key
+const verifyApiKey = (req, res, next) => {
+  const providedApiKey = req.query.api_key;
+  if (!providedApiKey || providedApiKey !== apiKey) {
+    return res.status(401).json({ message: "Unauthorized: Invalid API key" });
+  }
+  next();
+};
+
+
+app.get("/download", verifyApiKey, async (req, res) => {
   try {
-    /*
-    const { api_key, url } = req.query;
-    if (api_key != process.env.APIKEY) {
-      return res
-        .status(403)
-        .send({ message: `Your APIKEY is incorrect: ${api_key}` });
-    } else {
-      const videoId = await ytdt.getURLVideoID(url);
-      const metaInfo = await ytdt.getInfo(url);
-      let data = {
-        url: "https://www.youtube.com/embed/" + videoId,
-        info: metaInfo.formats,
-      };
-      return res.status(200).send(data);
-    }*/
-    const {  url } = req.query;
+    const { url } = req.query;
     const videoId = await ytdt.getURLVideoID(url);
-      const metaInfo = await ytdt.getInfo(url);
-      let data = {
-        url: "https://www.youtube.com/embed/" + videoId,
-        info: metaInfo.formats,
-      };
-      return res.status(200).send(data);
+    const metaInfo = await ytdt.getInfo(url);
+    let data = {
+      url: "https://www.youtube.com/embed/" + videoId,
+      info: metaInfo.formats,
+    };
+    return res.status(200).send(data);
   } catch (error) {
-    return console.log(error);
+    console.error(error);
+    if (error.message === "Invalid YouTube URL") {
+      return res.status(400).json({ message: error.message });
+    } else {
+      return res.status(500).json({ message: "Internal Server Error" });
+    }
   }
 });
+
 app.listen(portNumber, () =>
   console.log(`Example app is listening on port ${portNumber}.`)
 );
+
